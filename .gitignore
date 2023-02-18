@@ -1,0 +1,37 @@
+# Ignore node modules
+node_modules/
+
+# Ignore compiled TypeScript files
+*.js
+*.js.map
+
+# Ignore build output directories
+build/
+dist/
+
+# Ignore environment configuration files
+.env
+
+# Ignore log files
+*.log
+logs/
+
+# Ignore npm package lock file
+package-lock.json
+
+# Ignore build output directories for TypeScript projects
+tsc-out/
+tsc-debug/
+tsc-release/
+tsc-esnext/
+
+# Ignore coverage reports
+coverage/
+
+# Ignore editor files
+*.iml
+*.ipr
+*.iws
+*.idea/
+.vs/
+.editorConfig

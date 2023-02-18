@@ -1,0 +1,38 @@
+{
+  "extends": "./node_modules/gts/tsconfig-google.json",
+  "compilerOptions": {
+    "outDir": "dist",
+    "strict": true,
+    "noImplicitAny": true,
+    "strictNullChecks": true,
+    "strictFunctionTypes": true,
+    "strictPropertyInitialization": true,
+    "strictBindCallApply": true,
+    "noImplicitThis": true,
+    "noImplicitReturns": true,
+    "alwaysStrict": true,
+    "esModuleInterop": true,
+    "declaration": true,
+    "experimentalDecorators": true,
+    "emitDecoratorMetadata": true,
+    "forceConsistentCasingInFileNames": true,
+    "target": "es2018",// Might need to adjust this for older versions of node
+    "module": "ESNext",// Might need to adjust this for older versions of node
+    "moduleResolution": "node",
+    "rootDir": ".",
+    "lib": ["ESNext"], // Might need to adjust this for older versions of node
+    "noEmitOnError": true,
+    "noFallthroughCasesInSwitch": true,
+    "pretty": true,
+    "sourceMap": true
+  },
+  "include": [
+    "src/**/*.ts",
+    "test/**/*.ts"
+  ],
+  "exclude": [
+    "node_modules",
+    "build",
+    "dist"
+  ]
+}
