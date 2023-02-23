@@ -47,43 +47,65 @@
   Singleton.makeSingleton(fooClassInstance);
  */
 
-type ConstructorType = new (any) => void;
-export default ConstructorType;
+export type Constructor = new (...args: any[]) => any;
+interface CallOrConstruct { // Found this in the TypeScript docs This will allow us to use the same function for both the constructor and the getInstance method
+  new (s: string): Date;
+  (n?: number): number;
+}
 export class Singleton<T extends Singleton<T>> {
   private static instances: Map<string, Singleton<any>> = new Map();
+  // Constructor
+  // Can be called:
+  //      from super() in a derived class
+  //      from the Singleton class
 
-  public constructor(private readonly derivedTypeArg?: ConstructorType, options?: any){
-    // if no derivedType is passed, then the class that extends Singleton is the derivedType
-    if(!derivedTypeArg) {
-      console.log("this.constructor: ", this.constructor);
-      }
-    const derivedType = derivedTypeArg || (this.constructor as ConstructorType);
-    console.log("derivedType: ", derivedType);
+  // if this constructor is being called from a derived class, then return the derived class instance using Singleton.getInstance(derivedClass, ...args);
+  // if this constructor is being called from the Singleton class, then call this.getInstance(derivedClass, ...args);
+  //
+  public constructor(private readonly derivedTypeArg?: Constructor, args?: any, options?: object){
+    // if no derivedType is passed, or the arg is not a constructor, then the class extends Singleton and is the derivedType
 
-    const typeName = derivedType.name;
 
-    if (Singleton.instances.has(typeName)) {
-      throw new Error(`Error: ${typeName} has already been instantiated`);
-    }
-
-    derivedType.call(this);
-
-    Singleton.instances.set(typeName, this);
+   // Singleton.getInstance(derivedTypeArg, args);
   }
 
-  public static getInstance<T extends Singleton<T>>(derivedTypeParam?: ConstructorType): Singleton<T> {
-    if(!derivedTypeParam) {
-      console.log("this.constructor: ", this.constructor);
+  public static getDerivedClass(arg, self){
+    console.log("arg: ", arg);
+    console.log("typeof arg: ", typeof arg);
+    console.log("this: ", this);
+    // If no arg is passed, or the arg is not a constructor, or the arg is the same as self, then the class extends Singleton and is the derivedType
+    if (!arg || arg.prototype === self || typeof arg !== "function" ) { //
+      console.log("getDerivedClass returning self: ", self);
+      return self as Constructor;
     }
-    const derivedType = derivedTypeParam || (this.constructor as ConstructorType);
+
+
+    return arg;
+  };
+
+  public static getInstance<T extends Singleton<T>>(derivedTypeArg?, args?: any): Singleton<T> {
+    // If the derivedType is not passed, then the class extends Singleton and is the derivedType
+    // Looks for instance of derivedType in the instances map
+    // If it exists, then return it
+    // If it doesn't exist, then create it and return it
+    const derivedType = Singleton.getDerivedClass(derivedTypeArg, this);
+    // If the derivedType is passed, then the class is not extending Singleton and is not the derivedType
     const typeName = derivedType.name;
-
-    if (Singleton.instances.has(typeName)) {
-      return Singleton.instances.get(typeName) as Singleton<T>;
+    if (!Singleton.instances.has(typeName)) {
+      console.log("Creating new Singleton instance: ", typeName);
+      // TODO: Causing an infinite loop. Figure out why.
+      const newInstance = args ? new derivedType(args): new derivedType();
+      console.log("newInstance: ", newInstance);
+      Singleton.instances.set(typeName, newInstance);
     }
+    const foundInstance = Singleton.instances.get(typeName);
+    console.log("foundInstance: ", foundInstance);
 
-    const newInstance = new Singleton(derivedType);
-    return newInstance as Singleton<T>;
+    if(!foundInstance){
+      throw new Error(`Error: ${typeName} could not be instantiated`);
+    }
+    return foundInstance;
+
   }
 
   public static getAllSingletons(): Singleton<any>[] {
