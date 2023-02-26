@@ -16,8 +16,6 @@ class SubClass2 extends Singleton {
   constructor(args) {
     super();
     const {foo = "bar"} = args ?? {};
-    console.log("SubClass2: foo: ", foo);
-    //SubClass2.getInstance()
   };
 }
 
@@ -26,20 +24,60 @@ class SubClass3 {
 
 class SubClass4 {
   constructor({foo}) {
-    console.log("SubClass4: foo: ", foo)
+    this.foo = foo;
   }
 }
 
 describe('Singleton and SubClasses', () => {
   let instancesWeakMap = new WeakMap();
-
+  let count = 0;
+  let hasIsCreatingInstanceBeenSetToTrue = false;
   beforeEach(() => {
+
+    class SubClass1 extends Singleton {
+      Foo = "Foo"
+    }
+
+    class SubClass2 extends Singleton {
+      constructor(args) {
+        super();
+        const {foo = "bar"} = args ?? {};
+      };
+    }
+
+    class SubClass3 {
+    }
+
+    class SubClass4 {
+      constructor({foo}) {
+        this.foo = foo;
+      }
+    }
+
     instancesWeakMap = new WeakMap();
     Singleton.instances = instancesWeakMap;
-   delete SubClass1.instance;
-   delete SubClass2.instance;
-   delete SubClass3.instance;
-   delete SubClass4.instance;
+    // const subClassesArr = [SubClass1, SubClass2, SubClass3, SubClass4];
+    // const isCreatingInstanceValues = {  // meh i'll just use this for now
+    //   SubClass1: SubClass1.isCreatingInstance,
+    //   SubClass2: SubClass2.isCreatingInstance,
+    //   SubClass3: SubClass3.isCreatingInstance,
+    //   SubClass4: SubClass4.isCreatingInstance
+    // }
+    // subClassesArr.forEach((subClass) => {
+    //   if(subClass.instance){
+    //     subClass.instance = null;
+    //   }
+    //   if(!!subClass.isCreatingInstance){
+    //       console.log(`isCreatingInstanceValues #${count}: `, isCreatingInstanceValues);
+    //       console.log(`this: `, this);
+    //       hasIsCreatingInstanceBeenSetToTrue = true;
+    //       subClass.isCreatingInstance;
+    //   }
+    //   if(subClass.constructor === SubClass3 || subClass.constructor === SubClass4){
+    //     delete subClass.isCreatingInstance;
+    //   }
+    // });
+    // count++;
   });
 
 
@@ -60,8 +98,6 @@ describe('Singleton and SubClasses', () => {
         expect(subClass).toBe(subClassAgain);
         expect(anotherSubClass).toBeInstanceOf(SubClass1);
         expect(subClass).toBe(anotherSubClass);
-
-
 
       });
       it('should be able to be instantiated without new keyword', () => {
@@ -163,6 +199,7 @@ describe('Singleton and SubClasses', () => {
             it('should be able to create a new instance of SubClass4 using the `Singleton.getInstance` static method', () => {
                 const subClass4 = Singleton.getInstance(SubClass4, {foo: 'test'});
                 expect(subClass4).toBeInstanceOf(SubClass4);
+
             });
             it('should return the same instance when multiple instances are created', () => {
                 const subClass4 = new Singleton(SubClass4, {foo: 'test'});
@@ -217,4 +254,7 @@ describe('Singleton and SubClasses', () => {
       });
     });
   });
+  if(hasIsCreatingInstanceBeenSetToTrue) {
+    console.log("hasIsCreatingInstanceBeenSetToTrue: ", hasIsCreatingInstanceBeenSetToTrue);
+  }
 });
