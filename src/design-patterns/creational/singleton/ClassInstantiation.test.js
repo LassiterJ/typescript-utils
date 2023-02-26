@@ -290,13 +290,12 @@ describe('Singleton and SubClasses', () => {
             expect(weakRef.deref()).toEqual(instance);
 
             SubClass1.instance = null;
-            setTimeout(() => { //  Set timeout to allow the WeakRef to be cleaned up because we don't know when the garbage collector will run or even if it will cleanup the WeakRef. This behavior is undeterminable.
+            setTimeout(() => { //  Set timeout to allow the WeakRef to be cleaned up because we don't know when the garbage collector will run or even if it will cleanup the WeakRef. This behavior is non-deterministic.
               expect(weakRef.deref()).toBeNull()
             }, 1000);
           });
         });
       });
-
     });
   });
   if(hasIsCreatingInstanceBeenSetToTrue) {
