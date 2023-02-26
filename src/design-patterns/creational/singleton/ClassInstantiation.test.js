@@ -252,6 +252,51 @@ describe('Singleton and SubClasses', () => {
         expect(subClass4).toBe(subClassSingletonGetInstanceSubClass4);
         // expect(subClass4).toBeInstanceOf(SubClass4);
       });
+      describe('Garbage Control and instance setting', () => {
+        beforeEach(() => {
+          Singleton.clearAllInstances();
+        });
+
+        describe('instance getter', () => {
+          it('should get the instance of the Singleton class', () => {
+            expect(Singleton.instance).toBeNull();
+
+            const instance = Singleton.getInstance(SubClass1);
+            expect(SubClass1.instance).toBe(instance);
+          });
+        });
+
+        describe('instance setter', () => {
+          it('should set the instance of the Derived class', () => {
+            const instance1 = Singleton.getInstance(SubClass1);
+            expect(SubClass1.instance).toBe(instance1);
+
+            const instance2 = new Singleton(SubClass1);
+            SubClass1.instance = instance2;
+            expect(SubClass1.instance).toBe(instance2);
+          });
+
+          it('should throw an error when setting an invalid value', () => {
+            expect(() => { SubClass1.instance = 'invalid value'; }).toThrow(Error);
+          });
+
+          it('should use a WeakRef for the instance', () => {
+            const instance = Singleton.getInstance(SubClass1);
+            expect(SubClass1.instance).toEqual(instance);
+
+            let weakRef = new WeakRef(instance);
+            instance.foo = 'bar';
+            instance.baz = 'qux';
+            expect(weakRef.deref()).toEqual(instance);
+
+            SubClass1.instance = null;
+            setTimeout(() => { //  Set timeout to allow the WeakRef to be cleaned up because we don't know when the garbage collector will run or even if it will cleanup the WeakRef. This behavior is undeterminable.
+              expect(weakRef.deref()).toBeNull()
+            }, 1000);
+          });
+        });
+      });
+
     });
   });
   if(hasIsCreatingInstanceBeenSetToTrue) {

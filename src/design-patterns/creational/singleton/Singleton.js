@@ -41,11 +41,21 @@ const extendClass = (baseClass, derivedClass) => { // TODO: For future implement
 
 // Main Class
 class Singleton {
-  static #setInstance = (refConstructor, instance) => {
-    Singleton.instances.set(refConstructor, instance);
-    refConstructor.instance = instance;
-    return refConstructor.instance;
-};
+  static #finalizerRegistry = new FinalizationRegistry(key => {
+    const instance = Singleton.instances.get(key);
+    if (instance) {
+      Singleton.clearInstance(instance);
+    }
+  });
+//   static #setInstance = (refConstructor, instance) => {
+//      const weakInstance = new WeakRef(instance);
+//    // const weakInstance = instance;
+//     Singleton.instances.set(refConstructor, weakInstance);
+//     refConstructor.instance = weakInstance;
+//     Singleton.#finalizerRegistry.register(weakInstance, refConstructor);
+//
+//     return instance;
+// };
   static #isVariableInstanceOfAClass = (ref) => {
  if(!ref){
    return false;
@@ -66,9 +76,91 @@ class Singleton {
 
 }
 
-  static instances = new WeakMap();
-  static instance = null;
+  static instances = new Map();
+  static instanceRef = null;
+  static get instance() {
+    const ref = this.instanceRef;
+    return ref && ref.deref() || Singleton.instanceRef;
+  }
+
+  static set instance(value) {
+    if(!value){
+      this.instanceRef = null;
+      return;
+    }
+    const weakInstance = new WeakRef(value);
+    Singleton.instances.set(weakInstance, value);
+    this.instanceRef = weakInstance;
+    Singleton.#finalizerRegistry.register(weakInstance, null);
+  }
+
   static isCreatingInstance = false;
+  static getInstance(classRef, classArgs, singletonOptions = {}) {
+    if(!classRef && this === Singleton){ // specifically checking for the Singleton class and not a derived class
+      throw new Error("refArg is required when calling getInstance from the Singleton class");
+    }
+    const ref = classRef || this;
+
+    const isInstanceOfAClass = Singleton.#isVariableInstanceOfAClass(ref);
+    const isNewInstance = isInstanceOfAClass && (ref !== ref?.constructor?.instance);
+
+    const newInstance = isNewInstance ? ref : null;
+    const refConstructor = isInstanceOfAClass ? ref.constructor : ref;
+    const existingInstance = isInstanceOfAClass ? ref.constructor?.instance: ref.instance;
+    const instanceInProcess = singletonOptions.madeWithNewKeyword || !!refConstructor?.isCreatingInstance;
+
+    if (!refConstructor) {
+      throw new Error("refType could not be derived");
+    }
+    /* If there is an instance of the derived class found, and we're not in the process of setting the instance already then go ahead and return the found instance*/
+    if (existingInstance && !instanceInProcess){
+      return existingInstance;
+    }
+    /* If there is an instance of the derived class already, and it's either a placeholder or has been created with the 'new' keyword, then this instance is already in the process of being created.  In this case, set the refConstructor to the instance and  return the instance.*/
+    if(instanceInProcess){
+      return !existingInstance ? refConstructor.instance = newInstance: existingInstance; // no need to set instance if the process has already started
+      // return !existingInstance ? Singleton.#setInstance(refConstructor, newInstance): existingInstance; // no need to set instance if the process has already started
+    }
+
+    const shouldCreateInstance  = !newInstance && !existingInstance;
+    if(shouldCreateInstance){
+      refConstructor.isCreatingInstance = true;
+      const instance = new refConstructor(classArgs);
+      if (instance){
+        refConstructor.isCreatingInstance = false;
+        // return Singleton.#setInstance(refConstructor, instance);
+        return refConstructor.instance = instance;
+      }
+    }
+    /* Else set the instance and return it */
+    if(!newInstance){
+      throw new Error("Could not get instance Please check to see if you are passing in a valid class reference or are using a class from the Singleton inheritance chain.");
+    }
+    // return Singleton.#setInstance(refConstructor, newInstance);
+    return refConstructor.instance = newInstance;
+  }
+  static getAllInstances(){
+    const instances = Singleton.instances && Array.from(Singleton.instances);
+    console.log("getAllInstances| instances: ", instances);
+    return instances;
+  }
+  static clearAllInstances(){
+    // This won't remove instances that have been directly set on the static instance property of the target class;
+    Singleton.instances = new WeakMap();
+    Singleton.instance = null; // Singleton.instance should never be se but just in case.
+  }
+  static clearInstance = (ref) => {
+    if(!ref){
+      return;
+    }
+    const isInstanceOfAClass = Singleton.#isVariableInstanceOfAClass(ref) && !ref.instance; // TODO: this might not work if the ref is a class that extends Singleton
+    const refConstructor = isInstanceOfAClass ? ref: ref.constructor;
+    if(!refConstructor){
+      return;
+    }
+    refConstructor.instance = null;
+    Singleton.instances.delete(refConstructor);
+  };
 
   constructor(classRef = null, classArgs = null, initialOptions = {}) {
     /*
@@ -97,69 +189,7 @@ class Singleton {
     return instance
   }
   /* The main function of our class that creates, gets, and sets instances */
-  static getInstance(classRef, classArgs, singletonOptions = {}) {
-    if(!classRef && this === Singleton){ // specifically checking for the Singleton class and not a derived class
-      throw new Error("refArg is required when calling getInstance from the Singleton class");
-    }
-    const ref = classRef || this;
 
-    const isInstanceOfAClass = Singleton.#isVariableInstanceOfAClass(ref);
-    const isNewInstance = isInstanceOfAClass && (ref !== ref?.constructor?.instance);
-
-    const newInstance = isNewInstance ? ref : null;
-    const refConstructor = isInstanceOfAClass ? ref.constructor : ref;
-    const existingInstance = isInstanceOfAClass ? ref.constructor?.instance: ref.instance;
-    const instanceInProcess = singletonOptions.madeWithNewKeyword || !!refConstructor?.isCreatingInstance;
-
-    if (!refConstructor) {
-      throw new Error("refType could not be derived");
-    }
-    /* If there is an instance of the derived class found, and we're not in the process of setting the instance already then go ahead and return the found instance*/
-    if (existingInstance && !instanceInProcess){
-      return existingInstance;
-    }
-    /* If there is an instance of the derived class already, and it's either a placeholder or has been created with the 'new' keyword, then this instance is already in the process of being created.  In this case, set the refConstructor to the instance and  return the instance.*/
-    if(instanceInProcess){
-      return !existingInstance ? Singleton.#setInstance(refConstructor, newInstance): existingInstance; // no need to set instance if the process has already started
-    }
-
-    const shouldCreateNewDerivedClassInstance  = !newInstance && !existingInstance;
-    if(shouldCreateNewDerivedClassInstance){
-      refConstructor.isCreatingInstance = true;
-      const instance = new refConstructor(classArgs);
-      if (instance){
-        refConstructor.isCreatingInstance = false;
-       return Singleton.#setInstance(refConstructor, instance);
-      }
-    }
-    /* Else set the instance and return it */
-    if(!newInstance){
-      throw new Error("Could not get instance Please check to see if you are passing in a valid class reference or are using a class from the Singleton inheritance chain.");
-    }
-    return Singleton.#setInstance(refConstructor, newInstance);
-  }
-  static getAllInstances(){
-    const instances = Singleton.instances && Array.from(Singleton.instances);
-    console.log("getAllInstances| instances: ", instances);
-    return instances;
-  }
-  static clearAllInstances(){
-    // This won't remove instances that have been directly set on the static instance property of the target class;
-    Singleton.instances = new WeakMap();
-    Singleton.instance = null; // Singleton.instance should never be se but just in case.
-  }
-  static clearInstance = (ref) => {
-    if(!ref){
-      return;
-    }
-    const isInstanceOfAClass = Singleton.#isVariableInstanceOfAClass(ref); // TODO: this might not work if the ref is a class that extends Singleton
-    const refConstructor = isInstanceOfAClass ? ref: ref.constructor;
-    if(!refConstructor){
-      return;
-    }
-    refConstructor.instance = null;
-    Singleton.instances.delete(refConstructor);
-  };
  }
 
 module.exports = {Singleton};
