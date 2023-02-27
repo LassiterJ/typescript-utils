@@ -184,7 +184,6 @@ describe('Singleton and SubClasses', () => {
                 const subClass3 = Singleton.getInstance(SubClass3);
                 expect(subClass3).toBeInstanceOf(SubClass3);
             });
-
             it('should return the same instance when multiple instances are created', () => {
                 const subClass3 = new Singleton(SubClass3);
                 const anotherSubClass3 = new Singleton(SubClass3);
@@ -255,6 +254,9 @@ describe('Singleton and SubClasses', () => {
       describe('Garbage Control and instance setting', () => {
         beforeEach(() => {
           Singleton.clearAllInstances();
+          setTimeout(() => {
+            // Wait for the WeakRef to be cleared
+          }, 100);
         });
 
         describe('instance getter', () => {
@@ -295,6 +297,64 @@ describe('Singleton and SubClasses', () => {
             }, 1000);
           });
         });
+        describe('clearAllInstances', () => {
+          it('should clear all instances of all Singletons', () => {
+            const instance1 = Singleton.getInstance(SubClass1);
+            const instance2 = Singleton.getInstance(SubClass2);
+            const instance3 = Singleton.getInstance(SubClass3);
+            const instance4 = Singleton.getInstance(SubClass4);
+
+            expect(SubClass1.instance).toBe(instance1);
+            expect(SubClass2.instance).toBe(instance2);
+            expect(SubClass3.instance).toBe(instance3);
+            expect(SubClass4.instance).toBe(instance4);
+
+            Singleton.clearAllInstances();
+            setTimeout(() => { //
+            expect(SubClass1.instance).toBeNull();
+            expect(SubClass2.instance).toBeNull();
+            expect(SubClass3.instance).toBeNull();
+            expect(SubClass4.instance).toBeNull();
+            }, );
+          });
+        });
+        describe(' clearInstance', () => {
+          it('should clear the instance of the Singleton class', () => {
+            const instance1 = Singleton.getInstance(SubClass1);
+            const instance2 = Singleton.getInstance(SubClass2);
+            const instance3 = Singleton.getInstance(SubClass3);
+            const instance4 = Singleton.getInstance(SubClass4);
+
+            expect(SubClass1.instance).toBe(instance1);
+            expect(SubClass2.instance).toBe(instance2);
+            expect(SubClass3.instance).toBe(instance3);
+            expect(SubClass4.instance).toBe(instance4);
+
+            SubClass1.clearInstance();
+            SubClass2.clearInstance();
+            Singleton.clearInstance(SubClass3);
+            Singleton.clearInstance(SubClass4);
+
+            setTimeout(() => { //
+            expect(SubClass1.instance).toBeNull();
+            expect(SubClass2.instance).toBeNull();
+            expect(SubClass3.instance).toBeNull();
+            expect(SubClass4.instance).toBeNull();
+            },1 );
+          });
+        });
+        describe('events', () => {
+          it('should emit an event when the instance is set', () => {
+
+          });
+        });
+       // describe('createExtendedClass', () => {
+       //   it('should create a new class that extends the Singleton class', () => {
+       //     const ExtendedClass = Singleton.createExtendedClass({superClass: Singleton, derivedClass: SubClass4, thisVal:this, passedArgs: [{foo:"bar"}]});
+       //     expect(ExtendedClass).toBeInstanceOf(Function);
+       //     expect(ExtendedClass).toBeInstanceOf(Singleton);
+       //   });
+       // });
       });
     });
   });
