@@ -61,14 +61,14 @@ class Singleton {
     // onExtendedClassCreated: null,
     // onExtendedClassCreatedError: null,
   };
-  constructor(arg1, arg2, arg3) { //classRef = null, classArgs = [], options = {} || {classRef, classArgs, ...options}
+  constructor(...args) { //classRef = null, classArgs = [], options = {} || {classRef, classArgs, ...options}
     /*
         Our constructor is responsible for determining what the derived class is from either a passed in reference or the calling class.
        This reference is then passed to the getInstance method to get or create the instance of the derived class
        We will also pass in the args and options to the getInstance method
     */
-    const {classRef, classArgs, options} = Singleton.processArgs({arg1, arg2, arg3, thisVal: this});
-
+    const {classRef, classArgs, options} = Singleton.processArgs({args, thisVal: this});
+console.log("arguments: ", arguments);
 /* Assign ref the given derivedClass. If the derivedClass is not passed, then if new.target is valid ref = this. This will be further validated in getInstance  */
     const isNewTargetValid = new.target === this.constructor && new.target !== Singleton;
     const isDerivedClassValid = classRef && !Array.isArray(classRef) && classRef !== Singleton;
@@ -97,9 +97,9 @@ class Singleton {
     Singleton.#finalizerRegistry.register(weakInstance, null);
   }
   /* The main function of our class. getInstance creates, gets, and sets instances */
-  static getInstance(arg1, arg2, arg3) {
+  static getInstance(...args) {
     // step 1: Process and validate the arguments
-    const {classRef, classArgs, options = {}} = Singleton.processArgs({arg1, arg2, arg3, thisVal: this});
+    const {classRef, classArgs, options = {}} = Singleton.processArgs({args, thisVal: this});
     const isInstanceOfAClass = Singleton.#isVariableInstanceOfAClass(classRef);
     const isNewInstance = isInstanceOfAClass && (classRef !== classRef?.constructor?.instance);
 
@@ -174,7 +174,12 @@ class Singleton {
     Singleton.instances.delete(refConstructor);
   };
   // static clearInstanceAsync = async(ref) => {};
-  static processArgs = ({arg1, arg2, arg3, thisVal}) => {
+  static processArgs = ({args, thisVal}) => {
+    if((!args || !args.length) && (!thisVal || thisVal === Singleton)){
+      return;
+    }
+
+    const [arg1, arg2, arg3] = args;
     let isFirstArgSingletonOptions = false;
     if(!arg1 && (thisVal === Singleton)){ // specifically checking for the Singleton class and not a derived class
       throw new Error("refArg is required when calling getInstance from the Singleton class");
