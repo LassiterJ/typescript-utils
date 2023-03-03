@@ -1,6 +1,6 @@
 // Class instantiation POC
 const {expect, describe, it} = require("@jest/globals");
-const {getObjectDetails, Singleton} = require( "./Singleton.js");
+const {Singleton} = require( "./Singleton.js");
 
 
 // Things that may be useful to use in this implementation
@@ -23,39 +23,19 @@ class SubClass3 {
 }
 
 class SubClass4 {
-  constructor({foo}) {
-    this.foo = foo;
+  constructor({foo = "fooBar"}) {
+    this.foo = foo ?? "bar"
   }
 }
 
 describe('Singleton and SubClasses', () => {
-  let instancesWeakMap = new WeakMap();
+  let instancesMap = new Map();
   let count = 0;
   let hasIsCreatingInstanceBeenSetToTrue = false;
   beforeEach(() => {
 
-    class SubClass1 extends Singleton {
-      Foo = "Foo"
-    }
 
-    class SubClass2 extends Singleton {
-      constructor(args) {
-        super();
-        const {foo = "bar"} = args ?? {};
-      };
-    }
-
-    class SubClass3 {
-    }
-
-    class SubClass4 {
-      constructor({foo}) {
-        this.foo = foo;
-      }
-    }
-
-    instancesWeakMap = new WeakMap();
-    Singleton.instances = instancesWeakMap;
+    Singleton.instances = instancesMap;
     // const subClassesArr = [SubClass1, SubClass2, SubClass3, SubClass4];
     // const isCreatingInstanceValues = {  // meh i'll just use this for now
     //   SubClass1: SubClass1.isCreatingInstance,

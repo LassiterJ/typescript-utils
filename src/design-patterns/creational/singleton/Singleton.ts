@@ -65,7 +65,7 @@ interface SingletonOptions {
 type Constructor = new (...args: any[]) => any;
 type SingletonArgs = any[];
 interface ProcessedSingletonArgs {
-  classRef: Constructor,
+  classRef: Constructor | ClassInstance<any>,
   classArgs: any[],
   options: SingletonOptions
 }
@@ -73,8 +73,8 @@ interface ProcessedSingletonArgs {
 type ClassInstance<T extends new (...args: any[]) => any> = InstanceType<T>;
 
 export class Singleton<T> {
-  static instances: Map<WeakRef<ClassInstance>, ClassInstance> = new Map();
-  static instanceRef: WeakRef<ClassInstance> | null = null;
+  static instances: Map<WeakRef<ClassInstance<any>>, ClassInstance<any>> = new Map();
+  static instanceRef: WeakRef<ClassInstance<any>> | null = null;
   static isCreatingInstance: boolean = false;
   static events: Map<string, ((...args: any[]) => void)[]> = new Map(); // Map of event names to arrays of events;
   static singletonDefaultOptions: SingletonOptions = {
@@ -87,8 +87,11 @@ export class Singleton<T> {
        This reference is then passed to the getInstance method to get or create the instance of the derived class
        We will also pass in the args and options to the getInstance method
     */
-    const {classRef, classArgs, options} = Singleton.processArgs({args, thisVal: this});
-
+    const processedArgs = Singleton.processArgs({args, thisVal: this});
+    if(!processedArgs){
+      return;
+    }
+    const {classRef, classArgs, options} = processedArgs;
     /* Assign ref the given derivedClass. If the derivedClass is not passed, then if new.target is valid ref = this. This will be further validated in getInstance  */
     const isNewTargetValid = new.target === this.constructor && new.target !== Singleton;
     const isDerivedClassValid = classRef && !Array.isArray(classRef) && classRef !== Singleton;
@@ -120,14 +123,18 @@ export class Singleton<T> {
   /* The main function of our class. getInstance creates, gets, and sets instances */
   static getInstance(...args: any []): ClassInstance<any> | null | undefined {
     // step 1: Process and validate the arguments
-    const {classRef, classArgs, options = {}} = Singleton.processArgs({args, thisVal: this});
+    const processedArgs = Singleton.processArgs({args, thisVal: this});
+    if(!processedArgs){
+      return;
+    }
+    const {classRef, classArgs, options} = processedArgs;
     const isInstanceOfAClass = Singleton.#isVariableInstanceOfAClass(classRef);
     const isNewInstance = isInstanceOfAClass && (classRef !== classRef?.constructor?.instance);
 
     const newInstance = isNewInstance ? classRef : null;
     const existingInstance = isInstanceOfAClass ? classRef.constructor?.instance: classRef.instance;
     const refConstructor = isInstanceOfAClass ? classRef.constructor : classRef;
-    const isDerivedFromSingleton = isInstanceOfAClass? classRef instanceof Singleton: classRef.prototype instanceof Singleton;
+    const isDerivedFromSingleton = isInstanceOfAClass && (classRef instanceof Singleton || classRef.prototype instanceof Singleton);
     const instanceInProcess = options.madeWithNewKeyword || !!refConstructor?.isCreatingInstance;
     const shouldCreateInstance = !newInstance && !existingInstance;
 
@@ -158,7 +165,7 @@ export class Singleton<T> {
       if (instance){
         constructorFunction.isCreatingInstance = false;
 
-        options.onInstanceCreated(instance);
+        // Emit event for onInstanceCreated: options.onInstanceCreated(instance);
 
         return constructorFunction.instance = instance;
       }
@@ -170,7 +177,7 @@ export class Singleton<T> {
     // return Singleton.#setInstance(refConstructor, newInstance);
     return refConstructor.instance = newInstance;
   }
-  static getAllInstances(): [WeakRef<ClassInstance>, ClassInstance][] | null | undefined {
+  static getAllInstances(): [WeakRef<ClassInstance<any>>, ClassInstance<any>][] | null | undefined {
     const instances = Singleton.instances && Array.from(Singleton.instances);
     console.log("getAllInstances| instances: ", instances);
     return instances;
@@ -182,12 +189,12 @@ export class Singleton<T> {
   }
   // static clearAllInstancesAsync = async() => {};
 
-  static clearInstance: (ref?: ClassInstance) => void = (ref = this as any) => {
+  static clearInstance: (ref?: ClassInstance<any>) => void = (ref = this as any) => {
     if(!ref){
       return;
     }
     const isInstanceOfAClass = Singleton.#isVariableInstanceOfAClass(ref) && !ref.instance; // TODO: this might not work if the ref is a class that extends Singleton
-    const refConstructor: object = isInstanceOfAClass ? ref: ref.constructor;
+    const refConstructor = isInstanceOfAClass ? ref: ref.constructor;
     if(!refConstructor){
       return;
     }
@@ -195,7 +202,7 @@ export class Singleton<T> {
     Singleton.instances.delete(refConstructor);
   };
   // static clearInstanceAsync = async(ref) => {};
-  static processArgs= ({args, thisVal}):ProcessedSingletonArgs => {
+  static processArgs= ({args, thisVal}):ProcessedSingletonArgs | undefined => {
     if((!args || !args.length) && (!thisVal || thisVal === Singleton)){
       return;
     }
@@ -252,7 +259,10 @@ export class Singleton<T> {
   //   return extendedClass;
   // }
   static #finalizerRegistry = new FinalizationRegistry(key => {
-    const instance = Singleton.instances.get(key);
+    if (!key) {
+      return;
+    }
+    const instance = Singleton.instances.get(key as WeakRef<typeof key>);
     if (instance) {
       Singleton.clearInstance(instance);
     }
